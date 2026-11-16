@@ -197,7 +197,8 @@ class DepthAnything3Net(nn.Module):
             sampled_depth = non_sky_depth[idx]
         else:
             sampled_depth = non_sky_depth
-        non_sky_max = torch.quantile(sampled_depth, 0.99)
+        # CUDA does not implement quantile for BF16 tensors.
+        non_sky_max = torch.quantile(sampled_depth.float(), 0.99).to(sampled_depth)
 
         # Set sky regions to maximum depth and high confidence
         output.depth, _ = set_sky_regions_to_max_depth(
@@ -520,7 +521,8 @@ class NestedDepthAnything3Net(nn.Module):
         # Sample depth confidence for quantile computation
         depth_conf_ns = output.depth_conf[non_sky_mask]
         depth_conf_sampled = sample_tensor_for_quantile(depth_conf_ns, max_samples=100000)
-        median_conf = torch.quantile(depth_conf_sampled, 0.5)
+        # CUDA does not implement quantile for BF16 tensors.
+        median_conf = torch.quantile(depth_conf_sampled.float(), 0.5).to(depth_conf_sampled)
 
         # Compute alignment mask
         align_mask = compute_alignment_mask(
@@ -557,7 +559,8 @@ class NestedDepthAnything3Net(nn.Module):
             sampled_depth = non_sky_depth[idx]
         else:
             sampled_depth = non_sky_depth
-        non_sky_max = min(torch.quantile(sampled_depth, 0.99), sky_depth_def)
+        # CUDA does not implement quantile for BF16 tensors.
+        non_sky_max = min(torch.quantile(sampled_depth.float(), 0.99), sky_depth_def)
 
         # Set sky regions to maximum depth and high confidence
         output.depth, output.depth_conf = set_sky_regions_to_max_depth(
